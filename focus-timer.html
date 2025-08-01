@@ -1,0 +1,817 @@
+<html lang="zh-CN"><head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>专注学习计时器</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#3B82F6',
+                            secondary: '#10B981',
+                            accent: '#F59E0B',
+                            dark: '#1E293B',
+                            light: '#F8FAFC'
+                        },
+                        fontFamily: {
+                            inter: ['Inter', 'system-ui', 'sans-serif'],
+                        },
+                    }
+                }
+            }
+        </script>
+        <style type="text/tailwindcss">
+            @layer utilities {
+                .content-auto {
+                    content-visibility: auto;
+                }
+                .timer-shadow {
+                    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1);
+                }
+                .progress-ring-circle {
+                    transition: stroke-dashoffset 1s linear;
+                    transform: rotate(-90deg);
+                    transform-origin: 50% 50%;
+                }
+                .slider-thumb::-webkit-slider-thumb {
+                    @apply appearance-none w-5 h-5 rounded-full bg-primary cursor-pointer;
+                }
+                .slider-thumb::-moz-range-thumb {
+                    @apply w-5 h-5 rounded-full bg-primary cursor-pointer border-none;
+                }
+            }
+        </style>
+    </head>
+    <body class="font-inter bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen text-dark flex flex-col">
+        <!-- 顶部导航 -->
+        <header class="w-full bg-white/80 backdrop-blur-md shadow-sm py-4 px-6 md:px-12 sticky top-0 z-50 transition-all duration-300">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-[clamp(1.25rem,3vw,1.75rem)] font-bold text-primary flex items-center gap-2">
+                    <i class="fa fa-clock-o"></i>
+                    <span>专注学习计时器</span>
+                </h1>
+                <div class="flex items-center gap-4">
+                    <div id="currentTime" class="text-slate-600 font-medium">
+                        --:--:--
+                    </div>
+                    <button id="settingsBtn" class="p-2 rounded-full hover:bg-slate-100 transition-colors duration-200">
+                        <i class="fa fa-cog text-slate-600"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="flex-1 container mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center">
+            <!-- 计时器显示 -->
+            <div class="relative w-full max-w-md mb-12">
+                <!-- 进度环 -->
+                <svg class="w-full h-full" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#E2E8F0" stroke-width="12"></circle>
+                    <circle id="progressRing" class="progress-ring-circle" cx="60" cy="60" r="54" fill="none" stroke="#3B82F6" stroke-width="12" stroke-dasharray="339.292" stroke-dashoffset="0"></circle>
+                </svg>
+                
+                <!-- 计时器内容 -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div id="timerDisplay" class="text-[clamp(2.5rem,8vw,4rem)] font-bold text-dark mb-2 transition-all duration-500">01:30:00</div>
+                    <div id="timerStatus" class="text-[clamp(1rem,3vw,1.25rem)] font-medium text-slate-600">
+                        微休息在 3-5 分钟后
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="flex gap-4 md:gap-6 mb-12">
+                <button id="startBtn" class="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
+                    <i class="fa fa-play"></i>
+                    <span>开始</span>
+                </button>
+                <button id="pauseBtn" class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2 hidden">
+                    <i class="fa fa-pause"></i>
+                    <span>暂停</span>
+                </button>
+                <button id="resetBtn" class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                    <i class="fa fa-refresh"></i>
+                    <span>重置</span>
+                </button>
+            </div>
+
+            <!-- 当前状态卡片 -->
+            <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 mb-8 transform transition-all duration-500 hover:shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa fa-info-circle text-primary"></i>
+                    <span>当前会话</span>
+                </h2>
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <div class="text-sm text-slate-500 mb-1">已完成学习</div>
+                        <div id="completedSessions" class="text-2xl font-bold text-primary">0</div>
+                        <div class="text-xs text-slate-400">个时段</div>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <div class="text-sm text-slate-500 mb-1">今日专注</div>
+                        <div id="totalFocusTime" class="text-2xl font-bold text-secondary">0小时</div>
+                        <div class="text-xs text-slate-400">学习时间</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 设置模态框 -->
+        <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h2 class="text-xl font-bold">设置</h2>
+                    <button id="closeSettingsBtn" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <!-- 学习时间设置 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">学习时间 (分钟)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="studyDuration" min="10" max="180" step="5" value="90" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                            <span id="studyDurationValue" class="text-lg font-medium min-w-[40px] text-center">90</span>
+                        </div>
+                    </div>
+
+                    <!-- 休息时间设置 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">休息时间 (分钟)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="breakDuration" min="5" max="60" step="5" value="20" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                            <span id="breakDurationValue" class="text-lg font-medium min-w-[40px] text-center">20</span>
+                        </div>
+                    </div>
+
+                    <!-- 微休息间隔设置 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">微休息间隔 (分钟)</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-slate-500">最小:</span>
+                                <input type="range" id="minMicroBreakInterval" min="0" max="14" step="1" value="3" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                                <span id="minMicroBreakIntervalValue" class="text-lg font-medium min-w-[30px] text-center">3</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-slate-500">最大:</span>
+                                <input type="range" id="maxMicroBreakInterval" min="1" max="15" step="1" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                                <span id="maxMicroBreakIntervalValue" class="text-lg font-medium min-w-[30px] text-center">5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 微休息时长设置 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">微休息时长 (秒)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="microBreakDuration" min="5" max="60" step="5" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                            <span id="microBreakDurationValue" class="text-lg font-medium min-w-[40px] text-center">10</span>
+                        </div>
+                    </div>
+
+                    <!-- 提示音设置 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-3">提示音设置</label>
+                        
+                        <div class="flex items-center justify-between mb-4">
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <i class="fa fa-volume-up text-primary"></i>
+                                <span>启用提示音</span>
+                            </label>
+                            <div class="relative inline-block w-12 h-6">
+                                <input type="checkbox" id="soundEnabled" checked="" class="opacity-0 w-0 h-0 peer">
+                                <label for="soundEnabled" class="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-slate-300 peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full transition-all peer peer-checked:bg-primary"></label>
+                                <span class="absolute left-1 bottom-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-6"></span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm text-slate-600 mb-2">选择提示音</label>
+                            <div class="flex items-center gap-3">
+                                <button id="selectSoundBtn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm flex-1">
+                                    选择本地音乐文件
+                                </button>
+                                <input type="file" id="soundFileInput" accept="audio/*" class="hidden">
+                                <button id="testSoundBtn" class="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors">
+                                    <i class="fa fa-play"></i>
+                                </button>
+                            </div>
+                            <div id="selectedSoundName" class="mt-2 text-sm text-slate-500 italic">
+                                未选择文件，将使用默认提示音
+                            </div>
+                            
+                            <!-- 音乐起始时间设置 -->
+                            <div id="audioStartTimeContainer" class="mt-4 hidden">
+                                <label class="block text-sm text-slate-600 mb-2">音乐起始时间 (秒)</label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="audioStartTime" min="0" max="120" step="1" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                                    <span id="audioStartTimeValue" class="text-lg font-medium min-w-[40px] text-center">0</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">设置音乐从第几秒开始播放（最大30秒）</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-slate-100 flex justify-end">
+                    <button id="saveSettingsBtn" class="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
+                        保存设置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 微休息提醒 -->
+        <div id="microBreakAlert" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center transform scale-95 transition-transform duration-300">
+                <div class="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fa fa-coffee text-2xl text-accent"></i>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">微休息时间</h2>
+                <p class="text-slate-600 mb-6">请休息一下，放松眼睛和大脑</p>
+                <div id="microBreakTimer" class="text-4xl font-bold text-accent mb-6">10</div>
+                <button id="skipMicroBreakBtn" class="px-6 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg transition-colors">
+                    跳过休息
+                </button>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="w-full bg-white/80 backdrop-blur-md py-4 px-6 text-center text-slate-500 text-sm">
+            <p>专注当下，成就未来 © 2025</p>
+        </footer>
+
+        <script>
+            // 全局状态变量
+            const state = {
+                isRunning: false,
+                isPaused: false,
+                isBreak: false,
+                isMicroBreak: false,
+                studyDuration: 90 * 60, // 90分钟（秒）
+                breakDuration: 20 * 60, // 20分钟（秒）
+                minMicroBreakInterval: 3 * 60, // 3分钟（秒）
+                maxMicroBreakInterval: 5 * 60, // 5分钟（秒）
+                microBreakDuration: 10, // 10秒
+                soundEnabled: true,
+                soundFile: null, // 存储用户选择的音频文件
+                soundFileName: '', // 存储用户选择的音频文件名
+                audioStartTime: 0, // 音乐起始时间（秒）
+                currentAudio: null, // 当前播放的音频对象
+                timeLeft: 90 * 60,
+                totalTime: 90 * 60,
+                microBreakTimeLeft: 0,
+                nextMicroBreakTime: 0,
+                completedSessions: 0,
+                totalFocusTime: 0,
+                timerInterval: null,
+                microBreakInterval: null,
+                currentMicroBreakInterval: 0
+            };
+
+            // DOM 元素引用
+            const elements = {
+                timerDisplay: document.getElementById('timerDisplay'),
+                timerStatus: document.getElementById('timerStatus'),
+                progressRing: document.getElementById('progressRing'),
+                startBtn: document.getElementById('startBtn'),
+                pauseBtn: document.getElementById('pauseBtn'),
+                resetBtn: document.getElementById('resetBtn'),
+                settingsBtn: document.getElementById('settingsBtn'),
+                settingsModal: document.getElementById('settingsModal'),
+                closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+                saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+                studyDuration: document.getElementById('studyDuration'),
+                studyDurationValue: document.getElementById('studyDurationValue'),
+                breakDuration: document.getElementById('breakDuration'),
+                breakDurationValue: document.getElementById('breakDurationValue'),
+                minMicroBreakInterval: document.getElementById('minMicroBreakInterval'),
+                minMicroBreakIntervalValue: document.getElementById('minMicroBreakIntervalValue'),
+                maxMicroBreakInterval: document.getElementById('maxMicroBreakInterval'),
+                maxMicroBreakIntervalValue: document.getElementById('maxMicroBreakIntervalValue'),
+                microBreakDuration: document.getElementById('microBreakDuration'),
+                microBreakDurationValue: document.getElementById('microBreakDurationValue'),
+                soundEnabled: document.getElementById('soundEnabled'),
+                soundFileInput: document.getElementById('soundFileInput'),
+                selectSoundBtn: document.getElementById('selectSoundBtn'),
+                testSoundBtn: document.getElementById('testSoundBtn'),
+                selectedSoundName: document.getElementById('selectedSoundName'),
+                audioStartTimeContainer: document.getElementById('audioStartTimeContainer'),
+                audioStartTime: document.getElementById('audioStartTime'),
+                audioStartTimeValue: document.getElementById('audioStartTimeValue'),
+                microBreakAlert: document.getElementById('microBreakAlert'),
+                microBreakTimer: document.getElementById('microBreakTimer'),
+                skipMicroBreakBtn: document.getElementById('skipMicroBreakBtn'),
+                completedSessions: document.getElementById('completedSessions'),
+                totalFocusTime: document.getElementById('totalFocusTime'),
+                currentTime: document.getElementById('currentTime')
+            };
+
+            // 初始化函数
+            function init() {
+                loadSettings();
+                updateTimerDisplay();
+                updateProgressRing();
+                updateSessionStats();
+                updateCurrentTime();
+                setInterval(updateCurrentTime, 1000);
+                setupEventListeners();
+                const radius = 54;
+                const circumference = radius * 2 * Math.PI;
+                elements.progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+            }
+
+            // 更新当前时间显示
+            function updateCurrentTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                elements.currentTime.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            // 从本地存储加载设置
+            function loadSettings() {
+                const savedSettings = localStorage.getItem('focusTimerSettings');
+                if (savedSettings) {
+                    const {
+                        studyDuration,
+                        breakDuration,
+                        minMicroBreakInterval,
+                        maxMicroBreakInterval,
+                        microBreakDuration,
+                        soundEnabled,
+                        soundFile,
+                        soundFileName,
+                        audioStartTime,
+                        completedSessions,
+                        totalFocusTime
+                    } = JSON.parse(savedSettings);
+                    
+                    state.studyDuration = studyDuration;
+                    state.breakDuration = breakDuration;
+                    state.minMicroBreakInterval = minMicroBreakInterval;
+                    state.maxMicroBreakInterval = maxMicroBreakInterval;
+                    state.microBreakDuration = microBreakDuration;
+                    state.soundEnabled = soundEnabled;
+                    state.soundFileName = soundFileName || '';
+                    state.audioStartTime = audioStartTime || 0;
+                    state.completedSessions = completedSessions || 0;
+                    state.totalFocusTime = totalFocusTime || 0;
+                    
+                    if (soundFile) {
+                        try {
+                            const byteCharacters = atob(soundFile);
+                            const byteNumbers = new Array(byteCharacters.length);
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            state.soundFile = new Blob([byteArray], {type: 'audio/*'});
+                        } catch (e) {
+                            console.error('无法恢复保存的音频文件:', e);
+                            state.soundFile = null;
+                            state.soundFileName = '';
+                        }
+                    }
+                    
+                    // 更新UI设置
+                    elements.studyDuration.value = studyDuration / 60;
+                    elements.studyDurationValue.textContent = studyDuration / 60;
+                    elements.breakDuration.value = breakDuration / 60;
+                    elements.breakDurationValue.textContent = breakDuration / 60;
+                    elements.minMicroBreakInterval.value = minMicroBreakInterval / 60;
+                    elements.minMicroBreakIntervalValue.textContent = minMicroBreakInterval / 60;
+                    elements.maxMicroBreakInterval.value = maxMicroBreakInterval / 60;
+                    elements.maxMicroBreakIntervalValue.textContent = maxMicroBreakInterval / 60;
+                    elements.microBreakDuration.value = microBreakDuration;
+                    elements.microBreakDurationValue.textContent = microBreakDuration;
+                    elements.soundEnabled.checked = soundEnabled;
+                    elements.audioStartTime.value = state.audioStartTime;
+                    elements.audioStartTimeValue.textContent = state.audioStartTime;
+                    
+                    if (state.soundFileName) {
+                        elements.audioStartTimeContainer.classList.remove('hidden');
+                    }
+                    
+                    if (state.soundFileName) {
+                        elements.selectedSoundName.textContent = `已选择: ${state.soundFileName}`;
+                    } else {
+                        elements.selectedSoundName.textContent = '未选择文件，将使用默认提示音';
+                    }
+                }
+                
+                resetTimer();
+            }
+
+            // 保存设置到本地存储
+            function saveSettings() {
+                const settingsData = {
+                    studyDuration: state.studyDuration,
+                    breakDuration: state.breakDuration,
+                    minMicroBreakInterval: state.minMicroBreakInterval,
+                    maxMicroBreakInterval: state.maxMicroBreakInterval,
+                    microBreakDuration: state.microBreakDuration,
+                    soundEnabled: state.soundEnabled,
+                    audioStartTime: state.audioStartTime,
+                    completedSessions: state.completedSessions,
+                    totalFocusTime: state.totalFocusTime,
+                    soundFileName: state.soundFileName,
+                    soundFile: null
+                };
+                
+                if (state.soundFile) {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        settingsData.soundFile = reader.result.split(',')[1];
+                        localStorage.setItem('focusTimerSettings', JSON.stringify(settingsData));
+                    };
+                    reader.readAsDataURL(state.soundFile);
+                } else {
+                    localStorage.setItem('focusTimerSettings', JSON.stringify(settingsData));
+                }
+            }
+
+            // 设置事件监听器
+            function setupEventListeners() {
+                elements.startBtn.addEventListener('click', startTimer);
+                elements.pauseBtn.addEventListener('click', pauseTimer);
+                elements.resetBtn.addEventListener('click', resetTimer);
+                
+                elements.settingsBtn.addEventListener('click', openSettings);
+                elements.closeSettingsBtn.addEventListener('click', closeSettings);
+                elements.saveSettingsBtn.addEventListener('click', saveUserSettings);
+                
+                elements.studyDuration.addEventListener('input', (e) => {
+                    elements.studyDurationValue.textContent = e.target.value;
+                });
+                elements.breakDuration.addEventListener('input', (e) => {
+                    elements.breakDurationValue.textContent = e.target.value;
+                });
+                elements.minMicroBreakInterval.addEventListener('input', (e) => {
+                    elements.minMicroBreakIntervalValue.textContent = e.target.value;
+                });
+                elements.maxMicroBreakInterval.addEventListener('input', (e) => {
+                    elements.maxMicroBreakIntervalValue.textContent = e.target.value;
+                });
+                elements.microBreakDuration.addEventListener('input', (e) => {
+                    elements.microBreakDurationValue.textContent = e.target.value;
+                });
+                elements.audioStartTime.addEventListener('input', (e) => {
+                    elements.audioStartTimeValue.textContent = e.target.value;
+                    state.audioStartTime = parseInt(e.target.value);
+                });
+                
+                elements.selectSoundBtn.addEventListener('click', () => {
+                    elements.soundFileInput.click();
+                });
+                
+                elements.soundFileInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                        state.soundFile = e.target.files[0];
+                        state.soundFileName = e.target.files[0].name;
+                        elements.selectedSoundName.textContent = `已选择: ${state.soundFileName}`;
+                        elements.audioStartTimeContainer.classList.remove('hidden');
+                    }
+                });
+                
+                elements.testSoundBtn.addEventListener('click', () => {
+                    stopAudio();
+                    playSound();
+                });
+                
+                elements.skipMicroBreakBtn.addEventListener('click', endMicroBreak);
+            }
+
+            // 打开设置模态框
+            function openSettings() {
+                elements.settingsModal.classList.remove('opacity-0', 'pointer-events-none');
+                elements.settingsModal.querySelector('div').classList.remove('scale-95');
+                elements.settingsModal.querySelector('div').classList.add('scale-100');
+            }
+
+            // 关闭设置模态框
+            function closeSettings() {
+                elements.settingsModal.classList.add('opacity-0', 'pointer-events-none');
+                elements.settingsModal.querySelector('div').classList.remove('scale-100');
+                elements.settingsModal.querySelector('div').classList.add('scale-95');
+            }
+
+            // 保存用户设置
+            function saveUserSettings() {
+                const minMicro = parseInt(elements.minMicroBreakInterval.value) * 60;
+                const maxMicro = parseInt(elements.maxMicroBreakInterval.value) * 60;
+                
+                if (minMicro >= maxMicro) {
+                    alert('最小微休息间隔不能大于或等于最大间隔');
+                    return;
+                }
+                
+                state.studyDuration = parseInt(elements.studyDuration.value) * 60;
+                state.breakDuration = parseInt(elements.breakDuration.value) * 60;
+                state.minMicroBreakInterval = minMicro;
+                state.maxMicroBreakInterval = maxMicro;
+                state.microBreakDuration = parseInt(elements.microBreakDuration.value);
+                state.soundEnabled = elements.soundEnabled.checked;
+                state.audioStartTime = parseInt(elements.audioStartTime.value);
+                
+                resetTimer();
+                saveSettings();
+                closeSettings();
+            }
+
+            // 开始计时器
+            function startTimer() {
+                if (state.isRunning && !state.isPaused) return;
+                
+                state.isRunning = true;
+                state.isPaused = false;
+                
+                elements.startBtn.classList.add('hidden');
+                elements.pauseBtn.classList.remove('hidden');
+                
+                if (state.nextMicroBreakTime === 0 && !state.isBreak) {
+                    scheduleNextMicroBreak();
+                }
+                
+                state.timerInterval = setInterval(() => {
+                    if (state.timeLeft > 0) {
+                        state.timeLeft--;
+                        
+                        if (!state.isBreak && !state.isMicroBreak) {
+                            const timeToNextMicroBreak = state.nextMicroBreakTime - (state.studyDuration - state.timeLeft);
+                            
+                            if (timeToNextMicroBreak <= 0) {
+                                startMicroBreak();
+                                return;
+                            }
+                            
+                            if (timeToNextMicroBreak >= 60) {
+                                elements.timerStatus.textContent = `微休息在 ${Math.floor(timeToNextMicroBreak / 60)} 分钟后`;
+                            } else {
+                                elements.timerStatus.textContent = `微休息在 ${timeToNextMicroBreak} 秒后`;
+                            }
+                        } else if (state.isMicroBreak) {
+                            elements.timerStatus.textContent = `微休息中 (主计时继续)`;
+                        }
+                        
+                        updateTimerDisplay();
+                        updateProgressRing();
+                    } else {
+                        clearInterval(state.timerInterval);
+                        if (state.microBreakInterval) {
+                            clearInterval(state.microBreakInterval);
+                        }
+                        
+                        if (state.isBreak) {
+                            // 休息结束 - 停止播放
+                            stopAudio();
+                            
+                            state.isBreak = false;
+                            state.timeLeft = state.studyDuration;
+                            state.totalTime = state.studyDuration;
+                            state.nextMicroBreakTime = 0;
+                            elements.timerStatus.textContent = '微休息在 3-5 分钟后';
+                            elements.progressRing.setAttribute('stroke', '#3B82F6');
+                            startTimer();
+                        } else {
+                            // 学习结束 - 准备进入休息，播放提示音
+                            stopAudio();
+                            playSound();
+                            
+                            state.completedSessions++;
+                            state.totalFocusTime += state.studyDuration / 3600;
+                            updateSessionStats();
+                            saveSettings();
+                            
+                            state.isBreak = true;
+                            state.timeLeft = state.breakDuration;
+                            state.totalTime = state.breakDuration;
+                            elements.timerStatus.textContent = '休息中';
+                            elements.progressRing.setAttribute('stroke', '#10B981');
+                            startTimer();
+                        }
+                    }
+                }, 1000);
+            }
+
+            // 暂停计时器
+            function pauseTimer() {
+                if (!state.isRunning || state.isPaused) return;
+                
+                clearInterval(state.timerInterval);
+                if (state.microBreakInterval) {
+                    clearInterval(state.microBreakInterval);
+                }
+                state.isPaused = true;
+                
+                elements.startBtn.classList.remove('hidden');
+                elements.pauseBtn.classList.add('hidden');
+                elements.timerStatus.textContent = state.isBreak ? '休息已暂停' : 
+                                                  state.isMicroBreak ? '微休息已暂停' : '学习已暂停';
+            }
+
+            // 重置计时器
+            function resetTimer() {
+                clearInterval(state.timerInterval);
+                clearInterval(state.microBreakInterval);
+                stopAudio(); // 确保音频停止
+                
+                state.isRunning = false;
+                state.isPaused = false;
+                state.isMicroBreak = false;
+                state.nextMicroBreakTime = 0;
+                
+                if (state.isBreak) {
+                    state.timeLeft = state.breakDuration;
+                    state.totalTime = state.breakDuration;
+                    elements.timerStatus.textContent = '准备休息';
+                } else {
+                    state.timeLeft = state.studyDuration;
+                    state.totalTime = state.studyDuration;
+                    elements.timerStatus.textContent = '微休息在 3-5 分钟后';
+                }
+                
+                hideMicroBreakAlert();
+                
+                elements.startBtn.classList.remove('hidden');
+                elements.pauseBtn.classList.add('hidden');
+                elements.progressRing.setAttribute('stroke', state.isBreak ? '#10B981' : '#3B82F6');
+                
+                updateTimerDisplay();
+                updateProgressRing();
+            }
+
+            // 安排下一次微休息
+            function scheduleNextMicroBreak() {
+                const elapsedStudyTime = state.studyDuration - state.timeLeft;
+                const range = state.maxMicroBreakInterval - state.minMicroBreakInterval;
+                state.currentMicroBreakInterval = Math.floor(Math.random() * range) + state.minMicroBreakInterval;
+                state.nextMicroBreakTime = elapsedStudyTime + state.currentMicroBreakInterval;
+                
+                if (state.nextMicroBreakTime >= state.studyDuration) {
+                    elements.timerStatus.textContent = '本次学习无更多微休息';
+                    return;
+                }
+                
+                const minutes = Math.floor(state.currentMicroBreakInterval / 60);
+                const seconds = state.currentMicroBreakInterval % 60;
+                if (seconds === 0) {
+                    elements.timerStatus.textContent = `微休息在 ${minutes} 分钟后`;
+                } else {
+                    elements.timerStatus.textContent = `微休息在 ${minutes} 分 ${seconds} 秒后`;
+                }
+            }
+
+            // 开始微休息
+            function startMicroBreak() {
+                state.isMicroBreak = true;
+                state.microBreakTimeLeft = state.microBreakDuration;
+                
+                showMicroBreakAlert();
+                // 微休息开始 - 播放音乐
+                stopAudio();
+                playSound();
+                
+                state.microBreakInterval = setInterval(() => {
+                    if (state.microBreakTimeLeft > 0) {
+                        state.microBreakTimeLeft--;
+                        elements.microBreakTimer.textContent = state.microBreakTimeLeft;
+                    } else {
+                        endMicroBreak();
+                    }
+                }, 1000);
+            }
+
+            // 结束微休息
+            function endMicroBreak() {
+                clearInterval(state.microBreakInterval);
+                state.isMicroBreak = false;
+                
+                hideMicroBreakAlert();
+                
+                // 微休息结束 - 停止播放
+                stopAudio();
+                
+                if (!state.isBreak && state.isRunning) {
+                    scheduleNextMicroBreak();
+                }
+            }
+
+            // 显示微休息提示
+            function showMicroBreakAlert() {
+                elements.microBreakTimer.textContent = state.microBreakDuration;
+                elements.microBreakAlert.classList.remove('opacity-0', 'pointer-events-none');
+                elements.microBreakAlert.querySelector('div').classList.remove('scale-95');
+                elements.microBreakAlert.querySelector('div').classList.add('scale-100');
+            }
+
+            // 隐藏微休息提示
+            function hideMicroBreakAlert() {
+                elements.microBreakAlert.classList.add('opacity-0', 'pointer-events-none');
+                elements.microBreakAlert.querySelector('div').classList.remove('scale-100');
+                elements.microBreakAlert.querySelector('div').classList.add('scale-95');
+            }
+
+            // 更新计时器显示
+            function updateTimerDisplay() {
+                const hours = Math.floor(state.timeLeft / 3600);
+                const minutes = Math.floor((state.timeLeft % 3600) / 60);
+                const seconds = state.timeLeft % 60;
+                
+                elements.timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // 更新进度环
+            function updateProgressRing() {
+                const radius = 54;
+                const circumference = radius * 2 * Math.PI;
+                const progress = state.timeLeft / state.totalTime;
+                const offset = circumference - (progress * circumference);
+                
+                elements.progressRing.style.strokeDashoffset = offset;
+            }
+
+            // 更新会话统计
+            function updateSessionStats() {
+                elements.completedSessions.textContent = state.completedSessions;
+                elements.totalFocusTime.textContent = state.totalFocusTime.toFixed(1) + '小时';
+            }
+
+            // 播放提示音
+            function playSound() {
+                if (!state.soundEnabled) return;
+                
+                // 确保先停止任何正在播放的音频
+                stopAudio();
+                
+                try {
+                    if (state.soundFile) {
+                        // 创建新的音频对象
+                        const audioUrl = URL.createObjectURL(state.soundFile);
+                        state.currentAudio = new Audio(audioUrl);
+                        
+                        // 设置起始时间，确保不超过音频长度
+                        state.currentAudio.addEventListener('loadedmetadata', function() {
+                            if (state.audioStartTime >= this.duration) {
+                                this.currentTime = 0;
+                            } else {
+                                this.currentTime = state.audioStartTime;
+                            }
+                            
+                            this.play().catch(e => {
+                                console.error('播放音频失败:', e);
+                                alert('由于浏览器限制，无法自动播放音频。请先与页面交互。');
+                            });
+                        });
+                        
+                        // 音频结束时清理
+                        state.currentAudio.onended = () => {
+                            URL.revokeObjectURL(audioUrl);
+                            state.currentAudio = null;
+                        };
+                    } else {
+                        // 播放默认提示音
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.type = 'sine';
+                        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                        
+                        oscillator.start();
+                        oscillator.stop(audioContext.currentTime + 0.5);
+                    }
+                } catch (e) {
+                    console.error('播放提示音失败:', e);
+                    alert('播放提示音失败，请尝试选择其他音频文件或检查浏览器设置。');
+                }
+            }
+
+            // 停止音频播放
+            function stopAudio() {
+                if (state.currentAudio) {
+                    try {
+                        state.currentAudio.pause();
+                        state.currentAudio.currentTime = 0;
+                        if (state.soundFile && state.currentAudio.src) {
+                            URL.revokeObjectURL(state.currentAudio.src);
+                        }
+                    } catch (e) {
+                        console.error('停止音频播放失败:', e);
+                    }
+                    state.currentAudio = null;
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', init);
+        </script>
+    </body></html>
+    
